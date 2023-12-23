@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from typing import Dict, List, Tuple
 
 import imagesize
@@ -7,6 +8,7 @@ import pandas as pd
 
 from core.config import config
 from core.log import log
+from core.util import Util
 
 
 class Data:
@@ -108,9 +110,12 @@ class Data:
     @staticmethod
     def filter_input_by_img_size(input_list: List[Tuple[str, int]], img_size: int) -> List[Tuple[str, int]]:
         """Filter given input list with respect to given image size"""
+        start_datetime = datetime.utcnow()
+        log.log(f"Filtering input list with respect to image size: {img_size:,}")
         res = []
         for img_path, class_id in input_list:
             h, w = imagesize.get(img_path)
             if h * w <= img_size:
                 res.append((img_path, class_id))
+        log.log(f"Filtering is finished in {Util.return_readable_time(start_datetime)}")
         return res

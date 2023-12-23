@@ -45,6 +45,8 @@ class Classification:
     def load_training_input(self, batch_size) -> None:
         # Prepare input list
         input_list = Data.parse_gtsrb_training()
+        # Filter the input list by image size
+        input_list = Data.filter_input_by_img_size(input_list, 2500)
         # Shuffle the input list -> Better training-validation splitting
         random.Random(4).shuffle(input_list)
         # Prepare training and validation sets
