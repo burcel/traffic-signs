@@ -30,7 +30,6 @@ class Util:
     @staticmethod
     def return_torch_device() -> torch.device:
         device = torch.device("cpu")
-        return device
         if torch.cuda.is_available():
             device = torch.device("cuda")
         elif torch.backends.mps.is_available():

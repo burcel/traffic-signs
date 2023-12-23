@@ -1,4 +1,5 @@
 import os
+import random
 from datetime import datetime
 from typing import List, Optional, Tuple
 
@@ -44,6 +45,8 @@ class Classification:
     def load_training_input(self, batch_size) -> None:
         # Prepare input list
         input_list = Data.parse_gtsrb_training()
+        # Shuffle the input list -> Better training-validation splitting
+        random.Random(4).shuffle(input_list)
         # Prepare training and validation sets
         training_list, validation_list = Data.split_sets(input_list, config.validation_split_percentage)
         # Initialize training dataloader
