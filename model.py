@@ -10,7 +10,7 @@ from torch.nn.parameter import Parameter
 from core.config import config
 from core.log import log
 from core.util import Util
-from nn.v1 import CVModel
+from nn.resnet18 import CVModel
 
 
 class Model:

@@ -8,9 +8,10 @@ class CVModel(nn.Module):
     """
     https://github.com/pytorch/examples/blob/main/mnist/main.py
     MNIST
+    Param: 1,204,715
     """
 
-    VERSION = "v1"
+    VERSION = "mnist"
 
     def __init__(self):
         super().__init__()

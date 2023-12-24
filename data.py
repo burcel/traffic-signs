@@ -15,7 +15,8 @@ class Data:
     @staticmethod
     def parse_gtsrb_training() -> List[Tuple[str, int]]:
         """Parse GTSRB training set and return list of (img_path, class_id)"""
-        log.log("Reading GTSRB Training dataset")
+        start_datetime = datetime.utcnow()
+        log.log("Reading GTSRB Training dataset...")
         input_list = []
         for folder in os.listdir(config.gtsrb_training_path):
             folder_path = os.path.join(config.gtsrb_training_path, folder)
@@ -25,6 +26,7 @@ class Data:
                     df = pd.read_csv(csv_path, delimiter=";")
                     for input_dict in df.to_dict("records"):
                         input_list.append((os.path.join(folder_path, input_dict["Filename"]), input_dict["ClassId"]))
+        log.log(f"Reading is finished in {Util.return_readable_time(start_datetime)}")
         log.log(f"Input length: {len(input_list):,}")
         return input_list
 
@@ -118,4 +120,5 @@ class Data:
             if h * w <= img_size:
                 res.append((img_path, class_id))
         log.log(f"Filtering is finished in {Util.return_readable_time(start_datetime)}")
+        log.log(f"Input length: {len(res):,}")
         return res
