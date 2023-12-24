@@ -95,7 +95,7 @@ class Model:
 
     def return_output_class_tensor(self, input_tensor: Tensor) -> Tuple[Tensor, Tensor]:
         """Forward input tensor into model and return class index and class percentage"""
-        output_tensor = self.return_output_tensor(input_tensor)
+        output_tensor = self.model(input_tensor)
         softmax_tensor = F.softmax(output_tensor, dim=1)
         class_index_tensor = torch.argmax(softmax_tensor, dim=1)
         return class_index_tensor, softmax_tensor

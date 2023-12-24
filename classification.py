@@ -28,9 +28,9 @@ class Classification:
         # Dataloader
         self.training_dataloader: Optional[DataLoader] = None
         self.validation_dataloader: Optional[DataLoader] = None
-        self.dataloader: Optional[DataLoader] = None
         self.dataloader_num_workers = 0
         self.prefetch_factor = 1
+        self.min_img_dim = 71
         # Chart path
         self.loss_chart_name = f"model-{self.model.return_model_version()}-loss.png"
         self.loss_chart_path = os.path.join(config.model_path, self.loss_chart_name)
@@ -46,7 +46,7 @@ class Classification:
         # Prepare input list
         input_list = Data.parse_gtsrb_training()
         # Filter the input list by image size
-        input_list = Data.filter_input_by_img_size(input_list, 2500)
+        input_list = Data.filter_input_by_img_size(input_list, self.min_img_dim**2)
         # Shuffle the input list -> Better training-validation splitting
         random.Random(4).shuffle(input_list)
         # Prepare training and validation sets
@@ -212,7 +212,7 @@ class Classification:
             self.epoch_validation_loss_list.append(epoch_mean_validation_loss)  # type: ignore  # noqa: PGH003
             log.log(f"Validation | Epoch: {epoch_index}/{config.epoch} | loss: {epoch_mean_validation_loss:.5f}", write=True)
             # Model validation
-            training_confusion_matrix, validation_confusion_matrix = self.check_model_efficiency()
+            training_confusion_matrix, validation_confusion_matrix = self.check_training_efficiency()
             # Epoch validation loss
             if epoch_mean_validation_loss < lowest_validation_loss:
                 # Save model
@@ -237,7 +237,7 @@ class Classification:
         # Negative value is because of Bayesian Optimization (maximizing value)
         return lowest_validation_loss  # type: ignore  # noqa: PGH003
 
-    def check_model_efficiency(self) -> Tuple[ConfusionMatrix, ConfusionMatrix]:
+    def check_training_efficiency(self) -> Tuple[ConfusionMatrix, ConfusionMatrix]:
         """Calculate model efficiency of training and validation dataloaders and populate confusion matrices lists for plots"""
         self.model.eval_mode()
         with torch.no_grad():
@@ -279,6 +279,63 @@ class Classification:
         # Calculate final accuracy
         confusion_matrix.calculate_metrics()
         return confusion_matrix
+
+    def check_model_efficiency(self) -> None:
+        """Calculate model efficiency of test dataset"""
+        # Load model
+        self.model.load_model()
+        self.model.eval_mode()
+        log.log(f"Model: {self.model.return_model_version()}", write=True)
+        # Load test input
+        input_list = Data.parse_gtsrb_training()
+        # Filter the input list by image size
+        input_list = Data.filter_input_by_img_size(input_list, self.min_img_dim**2)
+        # Initialize training dataloader
+        dataloader = DataLoader(
+            CustomDataset(input_list),
+            batch_size=config.batch_size,
+            collate_fn=CustomDataset.collate_fn,
+        )
+
+        with torch.no_grad():
+            start_time = datetime.utcnow()
+            log.log("Calculating dataset accuracy...")
+            confusion_matrix = self.calculate_dataloader_efficiency(dataloader)  # type: ignore  # noqa: PGH003
+            log.log(f"Finished in {Util.return_readable_time(start_time)}")
+            log.log(f"Metrics:\n{confusion_matrix.return_metrics_table()}", write=True)
+            log.log(f"Class metrics:\n{confusion_matrix.return_class_metrics_table()}", write=True)
+            log.log(f"Confusion matrix:\n{confusion_matrix!s}", write=True)
+
+    def calculate_inference(self) -> None:
+        """Calculate inference time for a dataset"""
+        # Load model
+        self.model.load_model()
+        self.model.eval_mode()
+        log.log(f"Model: {self.model.return_model_version()}", write=True)
+        # Load test input
+        input_list = Data.parse_gtsrb_training()
+        # Filter the input list by image size
+        input_list = Data.filter_input_by_img_size(input_list, self.min_img_dim**2)
+        # Initialize training dataloader
+        dataloader = DataLoader(
+            CustomDataset(input_list),
+            batch_size=config.batch_size,
+            collate_fn=CustomDataset.collate_fn,
+        )
+        with torch.no_grad():
+            batch_inference_list = []
+            for input_tensor, _ in dataloader:
+                start_time = datetime.utcnow()
+                # Forward pass to get output
+                _, _ = self.model.return_output_class_tensor(input_tensor)
+                batch_inference_list.append((datetime.utcnow() - start_time).total_seconds() * 1000)
+            log.log(f"Min inference: {min(batch_inference_list)} ms", write=True)
+            log.log(f"Max inference: {max(batch_inference_list)} ms", write=True)
+            log.log(f"Avg inference: {np.mean(batch_inference_list):.5f} ms", write=True)
+
+    def predict(self, img_path: str) -> None:
+        """Predict the class of given image"""
+        ...
 
 
 def main():

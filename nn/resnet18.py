@@ -125,7 +125,7 @@ class CVModel(nn.Module):
         x = F.relu(x)
 
         x = self.avg6_1(x)
-        # Flatten : (batch_size, channel, height_dim, width_dim) -> (batch_size, flatten_image_size)
+        # Flatten: (batch_size, channel, height_dim, width_dim) -> (batch_size, flatten_image_size)
         x = x.view(-1, 256)
         x = self.fc6_2(x)
         x = self.bn6_3(x)
