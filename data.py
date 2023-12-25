@@ -1,3 +1,4 @@
+import math
 import os
 from datetime import datetime
 from typing import Dict, List, Tuple
@@ -72,7 +73,10 @@ class Data:
         plt.title("Image Size Histogram")
         plt.xlabel("Image Size")
         plt.ylabel("Frequency")
-        plt.hist(img_size_list, color="blue", alpha=0.8, ec="white")
+        _, bins, _ = plt.hist(img_size_list, color="blue", alpha=0.8, bins=15, ec="white")
+        bin_centers = 0.5 * (bins[:-1] + bins[1:])
+        sqrt_labels = [str(int(math.sqrt(x))) for x in bin_centers]
+        plt.xticks(bin_centers, sqrt_labels)
         plt.savefig("histogram-image-size.png")
         plt.close()
 
@@ -96,7 +100,8 @@ class Data:
             class_list.append(class_id)
             h, w = imagesize.get(img_path)
             img_size = h * w
-            img_size_list.append(img_size)
+            if img_size < 150 * 150:
+                img_size_list.append(img_size)
             if img_size > 10000:
                 c1 += 1
             if img_size > 5000:
@@ -122,9 +127,3 @@ class Data:
         log.log(f"Filtering is finished in {Util.return_readable_time(start_datetime)}")
         log.log(f"Input length: {len(res):,}")
         return res
-
-
-input_list = Data.parse_gtsrb_test()
-print(len(input_list))
-input_list = Data.filter_input_by_img_size(input_list, 71**2)
-print(len(input_list))

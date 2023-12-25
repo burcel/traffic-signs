@@ -58,7 +58,7 @@ class Classification:
             shuffle=True,
             num_workers=self.dataloader_num_workers,
             prefetch_factor=self.prefetch_factor if self.dataloader_num_workers != 0 else None,
-            collate_fn=CustomDataset.collate_fn,
+            collate_fn=CustomDataset.collate_fn if batch_size != 1 else None,
         )
         # Initialize validation dataloader
         self.validation_dataloader = DataLoader(
@@ -67,7 +67,7 @@ class Classification:
             shuffle=True,
             num_workers=self.dataloader_num_workers,
             prefetch_factor=self.prefetch_factor if self.dataloader_num_workers != 0 else None,
-            collate_fn=CustomDataset.collate_fn,
+            collate_fn=CustomDataset.collate_fn if batch_size != 1 else None,
         )
         # Initialize training variables
         self.epoch_training_loss_list.clear()
@@ -147,7 +147,6 @@ class Classification:
         criterion = nn.CrossEntropyLoss()
         # Optimizer
         optimizer = torch.optim.Adam(self.model.model.parameters(), lr=learning_rate, betas=(beta1, beta2))
-        # TODO: Initial model efficiency calculation
 
         # Initiate training values
         training_start_time = datetime.utcnow()
@@ -231,7 +230,6 @@ class Classification:
             self.save_loss_plot()
             self.save_accuracy_plot()
             log.log("Plots are saved.")
-            # TODO: early stop?
 
         log.log(f"Training is finished in {Util.return_readable_time(training_start_time)}", write=True)
         # Negative value is because of Bayesian Optimization (maximizing value)
@@ -306,32 +304,104 @@ class Classification:
             log.log(f"Class metrics:\n{confusion_matrix.return_class_metrics_table()}", write=True)
             log.log(f"Confusion matrix:\n{confusion_matrix!s}", write=True)
 
-    def calculate_inference(self) -> None:
-        """Calculate inference time for a dataset"""
-        # Load model
-        self.model.load_model()
-        self.model.eval_mode()
-        log.log(f"Model: {self.model.return_model_version()}", write=True)
+    def calculate_gpu_inference(self) -> None:
+        """
+        Calculate GPU inference time for a dataset
+        Ref: https://deci.ai/blog/measure-inference-time-deep-neural-networks/
+        """
+        if not torch.cuda.is_available():
+            raise AssertionError("NO CUDA?")
+        log.log("Calculating GPU inference time of the model...", write=True)
         # Load test input
         input_list = Data.parse_gtsrb_training()
         # Filter the input list by image size
         input_list = Data.filter_input_by_img_size(input_list, self.min_img_dim**2)
-        # Initialize training dataloader
-        dataloader = DataLoader(
-            CustomDataset(input_list),
-            batch_size=config.batch_size,
-            collate_fn=CustomDataset.collate_fn,
-        )
-        with torch.no_grad():
-            batch_inference_list = []
-            for input_tensor, _ in dataloader:
-                start_time = datetime.utcnow()
-                # Forward pass to get output
-                _, _ = self.model.return_output_class_tensor(input_tensor)
-                batch_inference_list.append((datetime.utcnow() - start_time).total_seconds() * 1000)
-            log.log(f"Min inference: {min(batch_inference_list)} ms", write=True)
-            log.log(f"Max inference: {max(batch_inference_list)} ms", write=True)
-            log.log(f"Avg inference: {np.mean(batch_inference_list):.5f} ms", write=True)
+        # Shuffle the input list
+        random.Random(44).shuffle(input_list)
+        # Take the first n inputs
+        input_list = input_list[:1000]
+        # Load model
+        self.model = Model()
+        self.model.load_model()
+        self.model.eval_mode()
+        log.log(f"Model: {self.model.return_model_version()}", write=True)
+        # Initiate batch experiment
+        batch_size_list = [1, 4, 16, 32, 64, 128]
+        for batch_size in batch_size_list:
+            # Initialize training dataloader
+            dataloader = DataLoader(
+                CustomDataset(input_list),
+                batch_size=batch_size,
+                collate_fn=CustomDataset.collate_fn if batch_size != 1 else None,
+            )
+            # Initiate event loggers
+            starter, ender = torch.cuda.Event(enable_timing=True), torch.cuda.Event(enable_timing=True)
+            # CUDA warm up
+            for _ in range(100):
+                dummy_input = torch.randn(batch_size, 3, 64, 64, dtype=torch.float).to(Util.return_torch_device())
+                _, _ = self.model.return_output_class_tensor(dummy_input)
+            # Measure performance
+            timings = []
+            with torch.no_grad():
+                for input_tensor, _ in dataloader:
+                    starter.record()
+                    _, _ = self.model.return_output_class_tensor(input_tensor)
+                    ender.record()
+                    # Wait for CUDA sync
+                    torch.cuda.synchronize()
+                    curr_time = starter.elapsed_time(ender)
+                    timings.append(curr_time)
+
+            log.log(f"Batch size: {batch_size}", write=True)
+            log.log(f"Min inference: {min(timings)} ms", write=True)
+            log.log(f"Max inference: {max(timings)} ms", write=True)
+            log.log(f"Avg inference: {np.mean(timings):.4f} ms", write=True)
+            log.log(f"Std inference: {np.std(timings):.4f} ms", write=True)
+
+    def calculate_cpu_inference(self) -> None:
+        """Calculate CPU inference time for a dataset"""
+        if Util.return_torch_device().type != "cpu":
+            raise AssertionError("Device type must be cpu")
+        log.log("Calculating CPU inference time of the model...", write=True)
+        # Load test input
+        input_list = Data.parse_gtsrb_training()
+        # Filter the input list by image size
+        input_list = Data.filter_input_by_img_size(input_list, self.min_img_dim**2)
+        # Shuffle the input list
+        random.Random(44).shuffle(input_list)
+        # Take the first n inputs
+        input_list = input_list[:1000]
+        # Load model
+        self.model = Model()
+        self.model.load_model()
+        self.model.eval_mode()
+        log.log(f"Model: {self.model.return_model_version()}", write=True)
+        # Initiate batch experiment
+        batch_size_list = [1, 4, 16, 32, 64, 128]
+        for batch_size in batch_size_list:
+            # Initialize training dataloader
+            dataloader = DataLoader(
+                CustomDataset(input_list),
+                batch_size=batch_size,
+                collate_fn=CustomDataset.collate_fn if batch_size != 1 else None,
+            )
+            # warm up
+            for _ in range(100):
+                dummy_input = torch.randn(batch_size, 3, 64, 64, dtype=torch.float).to(Util.return_torch_device())
+                _, _ = self.model.return_output_class_tensor(dummy_input)
+            # Measure performance
+            timings = []
+            with torch.no_grad():
+                for input_tensor, _ in dataloader:
+                    start_time = datetime.utcnow()
+                    _, _ = self.model.return_output_class_tensor(input_tensor)
+                    timings.append((datetime.utcnow() - start_time).total_seconds() * 1000)
+
+            log.log(f"Batch size: {batch_size}", write=True)
+            log.log(f"Min inference: {min(timings)} ms", write=True)
+            log.log(f"Max inference: {max(timings)} ms", write=True)
+            log.log(f"Avg inference: {np.mean(timings):.4f} ms", write=True)
+            log.log(f"Std inference: {np.std(timings):.4f} ms", write=True)
 
     def predict(self, img_path: str) -> None:
         """Predict the class of given image"""
