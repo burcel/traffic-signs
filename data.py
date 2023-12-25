@@ -35,7 +35,7 @@ class Data:
         """Parse GTSRB test set and return list of (img_path, class_id)"""
         log.log("Reading GTSRB Test dataset")
         input_list = []
-        csv_path = os.path.join(config.gtsrb_test_path, "GT-final_test.test.csv")
+        csv_path = os.path.join(os.path.dirname(os.path.dirname(config.gtsrb_test_path)), "GT-final_test.csv")
         if os.path.isfile(csv_path):
             df = pd.read_csv(csv_path, delimiter=";")
             for input_dict in df.to_dict("records"):
@@ -122,3 +122,9 @@ class Data:
         log.log(f"Filtering is finished in {Util.return_readable_time(start_datetime)}")
         log.log(f"Input length: {len(res):,}")
         return res
+
+
+input_list = Data.parse_gtsrb_test()
+print(len(input_list))
+input_list = Data.filter_input_by_img_size(input_list, 71**2)
+print(len(input_list))
