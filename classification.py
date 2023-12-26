@@ -341,7 +341,7 @@ class Classification:
                 dummy_input = torch.randn(batch_size, 3, 64, 64, dtype=torch.float).to(Util.return_torch_device())
                 _, _ = self.model.return_output_class_tensor(dummy_input)
             # Measure performance
-            timings = []
+            timings, timings_per_img = [], []
             with torch.no_grad():
                 for input_tensor, _ in dataloader:
                     starter.record()
@@ -351,12 +351,19 @@ class Classification:
                     torch.cuda.synchronize()
                     curr_time = starter.elapsed_time(ender)
                     timings.append(curr_time)
+                    timings_per_img.append(curr_time / batch_size)
 
             log.log(f"Batch size: {batch_size}", write=True)
-            log.log(f"Min inference: {min(timings)} ms", write=True)
-            log.log(f"Max inference: {max(timings)} ms", write=True)
-            log.log(f"Avg inference: {np.mean(timings):.4f} ms", write=True)
-            log.log(f"Std inference: {np.std(timings):.4f} ms", write=True)
+
+            log.log(f"Min inference (batch): {min(timings):.3f} ms", write=True)
+            log.log(f"Max inference (batch): {max(timings):.3f} ms", write=True)
+            log.log(f"Avg inference (batch): {np.mean(timings):.3f} ms", write=True)
+            log.log(f"Std inference (batch): {np.std(timings):.3f} ms", write=True)
+
+            log.log(f"Min inference (batch): {min(timings_per_img):.3f} ms", write=True)
+            log.log(f"Max inference (batch): {max(timings_per_img):.3f} ms", write=True)
+            log.log(f"Avg inference (batch): {np.mean(timings_per_img):.3f} ms", write=True)
+            log.log(f"Std inference (batch): {np.std(timings_per_img):.3f} ms", write=True)
 
     def calculate_cpu_inference(self) -> None:
         """Calculate CPU inference time for a dataset"""
@@ -390,18 +397,26 @@ class Classification:
                 dummy_input = torch.randn(batch_size, 3, 64, 64, dtype=torch.float).to(Util.return_torch_device())
                 _, _ = self.model.return_output_class_tensor(dummy_input)
             # Measure performance
-            timings = []
+            timings, timings_per_img = [], []
             with torch.no_grad():
                 for input_tensor, _ in dataloader:
                     start_time = datetime.utcnow()
                     _, _ = self.model.return_output_class_tensor(input_tensor)
-                    timings.append((datetime.utcnow() - start_time).total_seconds() * 1000)
+                    t = (datetime.utcnow() - start_time).total_seconds() * 1000
+                    timings.append(t)
+                    timings_per_img.append(t / batch_size)
 
             log.log(f"Batch size: {batch_size}", write=True)
-            log.log(f"Min inference: {min(timings)} ms", write=True)
-            log.log(f"Max inference: {max(timings)} ms", write=True)
-            log.log(f"Avg inference: {np.mean(timings):.4f} ms", write=True)
-            log.log(f"Std inference: {np.std(timings):.4f} ms", write=True)
+
+            log.log(f"Min inference (batch): {min(timings):.3f} ms", write=True)
+            log.log(f"Max inference (batch): {max(timings):.3f} ms", write=True)
+            log.log(f"Avg inference (batch): {np.mean(timings):.3f} ms", write=True)
+            log.log(f"Std inference (batch): {np.std(timings):.3f} ms", write=True)
+
+            log.log(f"Min inference (batch): {min(timings_per_img):.3f} ms", write=True)
+            log.log(f"Max inference (batch): {max(timings_per_img):.3f} ms", write=True)
+            log.log(f"Avg inference (batch): {np.mean(timings_per_img):.3f} ms", write=True)
+            log.log(f"Std inference (batch): {np.std(timings_per_img):.3f} ms", write=True)
 
     def predict(self, img_path: str) -> None:
         """Predict the class of given image"""
