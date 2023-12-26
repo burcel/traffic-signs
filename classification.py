@@ -30,7 +30,7 @@ class Classification:
         self.validation_dataloader: Optional[DataLoader] = None
         self.dataloader_num_workers = 0
         self.prefetch_factor = 1
-        self.min_img_dim = 71
+        self.min_img_dim = 120
         # Chart path
         self.loss_chart_name = f"model-{self.model.return_model_version()}-loss.png"
         self.loss_chart_path = os.path.join(config.model_path, self.loss_chart_name)
@@ -292,7 +292,7 @@ class Classification:
         dataloader = DataLoader(
             CustomDataset(input_list),
             batch_size=config.batch_size,
-            collate_fn=CustomDataset.collate_fn,
+            collate_fn=CustomDataset.collate_fn if config.batch_size != 1 else None,
         )
 
         with torch.no_grad():
