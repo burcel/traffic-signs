@@ -360,10 +360,10 @@ class Classification:
             log.log(f"Avg inference (batch): {np.mean(timings):.3f} ms", write=True)
             log.log(f"Std inference (batch): {np.std(timings):.3f} ms", write=True)
 
-            log.log(f"Min inference (batch): {min(timings_per_img):.3f} ms", write=True)
-            log.log(f"Max inference (batch): {max(timings_per_img):.3f} ms", write=True)
-            log.log(f"Avg inference (batch): {np.mean(timings_per_img):.3f} ms", write=True)
-            log.log(f"Std inference (batch): {np.std(timings_per_img):.3f} ms", write=True)
+            log.log(f"Min inference (img): {min(timings_per_img):.3f} ms", write=True)
+            log.log(f"Max inference (img): {max(timings_per_img):.3f} ms", write=True)
+            log.log(f"Avg inference (img): {np.mean(timings_per_img):.3f} ms", write=True)
+            log.log(f"Std inference (img): {np.std(timings_per_img):.3f} ms", write=True)
 
     def calculate_cpu_inference(self) -> None:
         """Calculate CPU inference time for a dataset"""
@@ -413,10 +413,10 @@ class Classification:
             log.log(f"Avg inference (batch): {np.mean(timings):.3f} ms", write=True)
             log.log(f"Std inference (batch): {np.std(timings):.3f} ms", write=True)
 
-            log.log(f"Min inference (batch): {min(timings_per_img):.3f} ms", write=True)
-            log.log(f"Max inference (batch): {max(timings_per_img):.3f} ms", write=True)
-            log.log(f"Avg inference (batch): {np.mean(timings_per_img):.3f} ms", write=True)
-            log.log(f"Std inference (batch): {np.std(timings_per_img):.3f} ms", write=True)
+            log.log(f"Min inference (img): {min(timings_per_img):.3f} ms", write=True)
+            log.log(f"Max inference (img): {max(timings_per_img):.3f} ms", write=True)
+            log.log(f"Avg inference (img): {np.mean(timings_per_img):.3f} ms", write=True)
+            log.log(f"Std inference (img): {np.std(timings_per_img):.3f} ms", write=True)
 
     def predict(self, img_path: str) -> None:
         """Predict the class of given image"""
