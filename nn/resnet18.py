@@ -8,7 +8,7 @@ class CVModel(nn.Module):
     """
     https://medium.com/analytics-vidhya/resnet-understand-and-implement-from-scratch-d0eb9725e0db
     ResNet-18
-    Param:
+    Param: 2,835,243
     """
 
     VERSION = "resnet18"

@@ -34,5 +34,4 @@ class CVModel(nn.Module):
         x = F.relu(x)
         x = self.dropout2(x)
         x = self.fc2(x)
-        return x
-        return F.log_softmax(x, dim=1)
+        return x  # F.log_softmax(x, dim=1) Removed log softmax due to cross entropy loss
